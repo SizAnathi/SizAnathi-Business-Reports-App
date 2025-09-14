@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 streamlit
 pandas
 openpyxl
+=======
+streamlit
+pandas
+openpyxl
+>>>>>>> 0c7fc0ba14f67819a4fc4c13d33f0325cd461e21
 matplotlib
