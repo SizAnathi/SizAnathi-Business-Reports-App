@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-streamlit
-pandas
-openpyxl
-=======
-streamlit
-pandas
-openpyxl
->>>>>>> 0c7fc0ba14f67819a4fc4c13d33f0325cd461e21
-matplotlib
+streamlit==1.36.0
+pandas==2.2.2
+matplotlib==3.9.2
+openpyxl==3.1.5
