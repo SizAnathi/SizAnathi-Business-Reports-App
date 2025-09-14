@@ -3,6 +3,9 @@ import pandas as pd
 import io
 import matplotlib.pyplot as plt
 
+# Disable file watcher to avoid inotify limit error
+st.runtime.set_file_watcher_type("none")
+
 # ---------------- STYLING ---------------- #
 st.markdown("""
     <style>
@@ -82,7 +85,7 @@ def calculate_production(df):
             - df["Sold Stock"]
             - df["Damaged Stock"]
             - df["Shortage"]
-            - df["Deliverd"]
+            - df["Delivered"]  
             - df["Walk In"]
         )
     return df
@@ -118,8 +121,8 @@ def show_summary(df, date_col="Date", color="Blues", chart_title="Summary Trends
     numeric_cols = df.select_dtypes(include=["number"]).columns
 
     weekly = df[numeric_cols].resample("W").sum()
-    monthly = df[numeric_cols].resample("ME").sum()  # fixed offset alias
-    yearly = df[numeric_cols].resample("YE").sum()
+    monthly = df[numeric_cols].resample("ME").sum()  # Month-end alias
+    yearly = df[numeric_cols].resample("YE").sum()  # Year-end alias
 
     st.subheader("📅 Weekly Summary")
     st.dataframe(weekly.style.background_gradient(cmap=color), width="stretch")
@@ -175,7 +178,7 @@ def show_summary(df, date_col="Date", color="Blues", chart_title="Summary Trends
 if "production" not in st.session_state:
     st.session_state.production = pd.DataFrame(columns=[
         "Date", "Production Type", "Opening Stock (kg)", "Produced Stock",
-        "Sold Stock", "Damaged Stock", "Shortage", "Deliverd", "Walk In",
+        "Sold Stock", "Damaged Stock", "Shortage", "Delivered", "Walk In",  
         "Stock Available", "Finish Time"
     ])
 
@@ -195,7 +198,7 @@ if "delivery" not in st.session_state:
     ])
 
 # ---------------- APP LAYOUT ---------------- #
-st.title("📊 Business Reports Dashboard")
+st.title("Business Reports Dashboard")
 
 tabs = st.tabs(["🏭 Production", "🛍️ Plastic", "🚚 Delivery"])
 
@@ -212,7 +215,7 @@ with tabs[0]:
         sold = st.number_input("Sold Stock", value=0)
         damaged = st.number_input("Damaged Stock", value=0)
         shortage = st.number_input("Shortage", value=0)
-        deliverd = st.number_input("Deliverd", value=0)
+        deliverd = st.number_input("Delivered", value=0) 
         walk_in = st.number_input("Walk In", value=0)
         finish_time = st.text_input("Finish Time")
 
@@ -221,7 +224,7 @@ with tabs[0]:
                 "Date": date, "Production Type": prod_type,
                 "Opening Stock (kg)": opening_stock, "Produced Stock": produced,
                 "Sold Stock": sold, "Damaged Stock": damaged,
-                "Shortage": shortage, "Deliverd": deliverd,
+                "Shortage": shortage, "Delivered": deliverd,  
                 "Walk In": walk_in, "Stock Available": 0,
                 "Finish Time": finish_time
             }
