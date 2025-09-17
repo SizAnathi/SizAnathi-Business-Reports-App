@@ -1,4 +1,4 @@
-streamlit==1.36.0
+streamlit==1.38.0  # Latest stable as of September 2025, check PyPI for the newest
 pandas==2.2.2
 matplotlib==3.9.2
 openpyxl==3.1.5
