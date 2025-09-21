@@ -3,9 +3,6 @@ import pandas as pd
 import io
 import matplotlib.pyplot as plt
 
-# Disable file watcher to avoid inotify limit error
-st.runtime.set_file_watcher_type("none")
-
 # ---------------- STYLING ---------------- #
 st.markdown("""
     <style>
@@ -85,7 +82,7 @@ def calculate_production(df):
             - df["Sold Stock"]
             - df["Damaged Stock"]
             - df["Shortage"]
-            - df["Delivered"]  
+            - df["Delivered"]
             - df["Walk In"]
         )
     return df
@@ -215,7 +212,7 @@ with tabs[0]:
         sold = st.number_input("Sold Stock", value=0)
         damaged = st.number_input("Damaged Stock", value=0)
         shortage = st.number_input("Shortage", value=0)
-        deliverd = st.number_input("Delivered", value=0) 
+        delivered = st.number_input("Delivered", value=0) 
         walk_in = st.number_input("Walk In", value=0)
         finish_time = st.text_input("Finish Time")
 
@@ -224,7 +221,237 @@ with tabs[0]:
                 "Date": date, "Production Type": prod_type,
                 "Opening Stock (kg)": opening_stock, "Produced Stock": produced,
                 "Sold Stock": sold, "Damaged Stock": damaged,
-                "Shortage": shortage, "Delivered": deliverd,  
+                "Shortage": shortage, "Delivered": delivered,  
+                "Walk In": walk_in, "Stock Available": 0,
+                "Finish Time": finish_time
+            }
+            st.session_state.production = pd.concat(
+                [st.session_state.production, pd.DataFrame([new_row])],
+                ignore```python
+import streamlit as st
+import pandas as pd
+import io
+import matplotlib.pyplot as plt
+
+# ---------------- STYLING ---------------- #
+st.markdown("""
+    <style>
+        h1, h2, h3 {
+            color: #1a237e;
+            font-family: 'Arial Black', sans-serif;
+        }
+        .stDataFrame th {
+            background-color: #263238 !important;
+            color: white !important;
+        }
+        .stDownloadButton button {
+            background-color: #1e88e5;
+            color: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            border: none;
+        }
+        .stDownloadButton button:hover {
+            background-color: #1565c0;
+        }
+        /* Tab colors */
+        div[data-baseweb="tab-list"] > div[role="tab"] {
+            background-color: #eeeeee;
+            border-radius: 8px 8px 0 0;
+            padding: 8px 16px;
+            margin-right: 4px;
+        }
+        div[data-baseweb="tab-list"] > div[role="tab"][aria-selected="true"] {
+            background-color: #1e88e5;
+            color: white !important;
+            font-weight: bold;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# ---------------- SPLASH / LOADING ---------------- #
+if "splash" not in st.session_state:
+    st.session_state.splash = True
+
+if st.session_state.splash:
+    st.markdown(
+        "<div style='text-align:center; padding:100px;'>"
+        "<h1 style='font-size:60px; color:#1e88e5;'>Business Reports</h1>"
+        "<p style='font-size:20px;'>Loading your dashboards...</p>"
+        "</div>",
+        unsafe_allow_html=True
+    )
+    st.session_state.splash = False
+    st.stop()
+
+# ---------------- DOWNLOAD FUNCTION ---------------- #
+def download_buttons(df, name):
+    if df.empty:
+        st.info("No data to download yet.")
+        return
+    
+    csv = df.to_csv(index=False).encode("utf-8")
+    st.download_button("⬇️ Download CSV", csv, f"{name}.csv", "text/csv")
+
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Sheet1")
+    st.download_button(
+        "⬇️ Download Excel",
+        buffer.getvalue(),
+        f"{name}.xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# ---------------- CALCULATION FUNCTIONS ---------------- #
+def calculate_production(df):
+    if not df.empty:
+        df["Stock Available"] = (
+            df["Opening Stock (kg)"]
+            + df["Produced Stock"]
+            - df["Sold Stock"]
+            - df["Damaged Stock"]
+            - df["Shortage"]
+            - df["Delivered"]  # Fixed typo from "Deliverd" to "Delivered"
+            - df["Walk In"]
+        )
+    return df
+
+def calculate_plastic(df):
+    if not df.empty:
+        df["Closing Stock (kg)"] = (
+            df["Opening Stock (kg)"]
+            + df["Purchase Plastic (kg)"]
+            - df["Raw Materials Used (kg)"]
+            - df["Rejects (kg)"]
+        )
+    return df
+
+def calculate_delivery(df):
+    if not df.empty:
+        df["Closing stock"] = df["Opening Stock"] - df["Sales stock"]
+        df["Total Sales amount"] = df["Credit"] + df["COD"]
+        df["Outstanding Credit Balance"] = df["Credit"] - df["Total Credit Paid"]
+        df["Total Money on Hand2"] = df["COD"] + df["Total Credit Paid"]
+    return df
+
+# ---------------- SUMMARY + CHARTS ---------------- #
+def show_summary(df, date_col="Date", color="Blues", chart_title="Summary Trends"):
+    if df.empty:
+        st.info("No data available for summary.")
+        return
+    
+    df = df.copy()
+    df[date_col] = pd.to_datetime(df[date_col])
+    df.set_index(date_col, inplace=True)
+
+    numeric_cols = df.select_dtypes(include=["number"]).columns
+
+    weekly = df[numeric_cols].resample("W").sum()
+    monthly = df[numeric_cols].resample("ME").sum()  # Month-end alias
+    yearly = df[numeric_cols].resample("YE").sum()  # Year-end alias
+
+    st.subheader("📅 Weekly Summary")
+    st.dataframe(weekly.style.background_gradient(cmap=color), width="stretch")
+
+    st.subheader("📅 Monthly Summary")
+    st.dataframe(monthly.style.background_gradient(cmap=color), width="stretch")
+
+    st.subheader("📅 Yearly Summary")
+    st.dataframe(yearly.style.background_gradient(cmap=color), width="stretch")
+
+    for label, summary in [("Weekly", weekly), ("Monthly", monthly), ("Yearly", yearly)]:
+        if summary.empty:
+            continue
+
+        st.markdown(f"### 📈 {label} {chart_title} - Line Chart")
+        fig, ax = plt.subplots(figsize=(8, 3))
+        summary.plot(ax=ax, marker="o")
+        ax.set_title(f"{label} {chart_title}")
+        ax.set_xlabel("Date")
+        ax.set_ylabel("Values")
+        st.pyplot(fig)
+
+        st.markdown(f"### 📊 {label} {chart_title} - Bar Chart")
+        fig, ax = plt.subplots(figsize=(8, 3))
+        summary.plot(kind="bar", ax=ax)
+        for container in ax.containers:
+            ax.bar_label(container, fmt="%.0f", label_type="edge", padding=2)
+        ax.set_title(f"{label} {chart_title}")
+        ax.set_xlabel("Period")
+        ax.set_ylabel("Values")
+        st.pyplot(fig)
+
+    # 📈 Extra: Cumulative Closing Stock Trend
+    if "Closing Stock (kg)" in df.columns or "Closing stock" in df.columns or "Stock Available" in df.columns:
+        st.subheader("📊 Cumulative Closing Stock Trend")
+        col = None
+        if "Stock Available" in df.columns:
+            col = "Stock Available"
+        elif "Closing Stock (kg)" in df.columns:
+            col = "Closing Stock (kg)"
+        elif "Closing stock" in df.columns:
+            col = "Closing stock"
+
+        if col:
+            fig, ax = plt.subplots(figsize=(8, 3))
+            df[col].cumsum().plot(ax=ax, color="purple", marker="o")
+            ax.set_title("Cumulative Closing Stock")
+            ax.set_xlabel("Date")
+            ax.set_ylabel("Cumulative Stock")
+            st.pyplot(fig)
+
+# ---------------- INITIALIZE SESSION STATE ---------------- #
+if "production" not in st.session_state:
+    st.session_state.production = pd.DataFrame(columns=[
+        "Date", "Production Type", "Opening Stock (kg)", "Produced Stock",
+        "Sold Stock", "Damaged Stock", "Shortage", "Delivered", "Walk In",  # Fixed typo
+        "Stock Available", "Finish Time"
+    ])
+
+if "plastic" not in st.session_state:
+    st.session_state.plastic = pd.DataFrame(columns=[
+        "Date", "Production Type", "Opening Stock (kg)",
+        "Purchase Plastic (kg)", "Raw Materials Used (kg)",
+        "Rejects (kg)", "Closing Stock (kg)", "Counted Plastics (kg)"
+    ])
+
+if "delivery" not in st.session_state:
+    st.session_state.delivery = pd.DataFrame(columns=[
+        "Date", "Production Type", "Opening Stock", "Closing stock",
+        "Sales stock", "Credit", "COD", "Total Sales amount",
+        "Credit Balance", "Total Credit Paid",
+        "Outstanding Credit Balance", "Total Money on Hand2"
+    ])
+
+# ---------------- APP LAYOUT ---------------- #
+st.title("Business Reports Dashboard")
+
+tabs = st.tabs(["🏭 Production", "🛍️ Plastic", "🚚 Delivery"])
+
+# ---------------- PRODUCTION TAB ---------------- #
+with tabs[0]:
+    st.header("Production Report")
+    with st.form("production_form", clear_on_submit=True):
+        date = st.date_input("Date")
+        prod_type = st.text_input("Production Type")
+
+        opening = st.session_state.production.iloc[-1]["Stock Available"] if not st.session_state.production.empty else 0
+        opening_stock = st.number_input("Opening Stock (kg)", value=int(opening))
+        produced = st.number_input("Produced Stock", value=0)
+        sold = st.number_input("Sold Stock", value=0)
+        damaged = st.number_input("Damaged Stock", value=0)
+        shortage = st.number_input("Shortage", value=0)
+        delivered = st.number_input("Delivered", value=0)  # Fixed label
+        walk_in = st.number_input("Walk In", value=0)
+        finish_time = st.text_input("Finish Time")
+
+        if st.form_submit_button("Add Record"):
+            new_row = {
+                "Date": date, "Production Type": prod_type,
+                "Opening Stock (kg)": opening_stock, "Produced Stock": produced,
+                "Sold Stock": sold, "Damaged Stock": damaged,
+                "Shortage": shortage, "Delivered": delivered,  # Fixed key
                 "Walk In": walk_in, "Stock Available": 0,
                 "Finish Time": finish_time
             }
