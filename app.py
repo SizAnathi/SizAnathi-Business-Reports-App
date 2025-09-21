@@ -122,13 +122,13 @@ def show_summary(df, date_col="Date", color="Blues", chart_title="Summary Trends
     yearly = df[numeric_cols].resample("YE").sum()  # Year-end alias
 
     st.subheader("📅 Weekly Summary")
-    st.dataframe(weekly.style.background_gradient(cmap=color), width="stretch")
+    st.dataframe(weekly.style.background_gradient(cmap=color))
 
     st.subheader("📅 Monthly Summary")
-    st.dataframe(monthly.style.background_gradient(cmap=color), width="stretch")
+    st.dataframe(monthly.style.background_gradient(cmap=color))
 
     st.subheader("📅 Yearly Summary")
-    st.dataframe(yearly.style.background_gradient(cmap=color), width="stretch")
+    st.dataframe(yearly.style.background_gradient(cmap=color))
 
     for label, summary in [("Weekly", weekly), ("Monthly", monthly), ("Yearly", yearly)]:
         if summary.empty:
@@ -232,7 +232,7 @@ with tabs[0]:
             st.session_state.production = calculate_production(st.session_state.production)
 
     st.subheader("Production Table")
-    st.dataframe(st.session_state.production.style.background_gradient(cmap="Blues"), width="stretch")
+    st.dataframe(st.session_state.production.style.background_gradient(cmap="Blues"))
     download_buttons(st.session_state.production, "production_report")
     show_summary(st.session_state.production, "Date", "Blues", "Production Totals")
 
@@ -267,7 +267,7 @@ with tabs[1]:
             st.session_state.plastic = calculate_plastic(st.session_state.plastic)
 
     st.subheader("Plastic Table")
-    st.dataframe(st.session_state.plastic.style.background_gradient(cmap="Greens"), width="stretch")
+    st.dataframe(st.session_state.plastic.style.background_gradient(cmap="Greens"))
     download_buttons(st.session_state.plastic, "plastic_report")
     show_summary(st.session_state.plastic, "Date", "Greens", "Plastic Totals")
 
@@ -304,6 +304,6 @@ with tabs[2]:
             st.session_state.delivery = calculate_delivery(st.session_state.delivery)
 
     st.subheader("Delivery Table")
-    st.dataframe(st.session_state.delivery.style.background_gradient(cmap="Oranges"), width="stretch")
+    st.dataframe(st.session_state.delivery.style.background_gradient(cmap="Oranges"))
     download_buttons(st.session_state.delivery, "delivery_report")
     show_summary(st.session_state.delivery, "Date", "Oranges", "Delivery Totals")
